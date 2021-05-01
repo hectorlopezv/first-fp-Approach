@@ -3,10 +3,22 @@ const { save, all } = require("../lib/db");
 const { Task, Id } = require("../lib/types");
 const { last } = require("rambda");
 
-const { liftF } = require("../lib/free");
+const { liftF, Free, Pure } = require("../lib/free");
 
 const { taggedSum } = require("daggy");
-
+const questions = {
+  whereTo:
+    "Where do you want to go today? (createAuthor, write, latest, all, end)",
+  title: "Title? ",
+  body: "Body? ",
+  name: "Name? ",
+};
+const answers = {
+  [questions.whereTo]: "end",
+  [questions.title]: "A title",
+  [questions.body]: "A body",
+  [questions.name]: "Some name",
+};
 const Console = taggedSum("Console", {
   Question: ["q"],
   Print: ["s"],
@@ -41,9 +53,7 @@ const question = (s) => liftF(Console.Question(s));
 const dbAll = (table, query) => liftF(Db.All(table, query));
 const dbSave = (table, record) => liftF(Db.Save(table, record));
 
-
 const writeOutput = (str) => Task((rej, res) => res(console.log(str)));
-
 
 ///()--> Task --> () --> Task
 const latest = () =>
@@ -72,12 +82,38 @@ const write = (msg) =>
 
 const router = { menu, createAuthor, write, latest };
 const interpret = (x) => (x.table ? dbToTask(x) : consoleToTask(x));
+
+//Testing with Id Mondad
+const consoleToId = (x) =>
+  x.cata({
+    Question: (q) => Id.of(answers[q]),
+    Print: (s) => Id.of(`writting the string ${s}`),
+  });
+
+const dbToId = (x) =>
+  x.cata({
+    Save: (table, query) => Id.of(`saving to ${r} ${table}`),
+    All: (table, record) => Id.of(`writting the string ${table} ${record}`),
+  });
+
 const start = () =>
   dbAll(AuthorTable).map((authors) => (authors.length ? menu : createAuthor));
-console.log("hello")
+
 const runApp = (f) => {
   console.log("f", f);
   return f().foldMap(interpret, Task.of).fork(console.error, runApp); //f(x)->g--> runApp(g)
 };
 
-runApp(start);
+//Test
+
+const interpretTest = (x) => (x.table ? dbToId(x) : consoleToId(x));
+const start_test = () =>
+  dbAll(AuthorTable).map((authors) => (authors.length ? menu : createAuthor));
+
+const runAppTest = (f) => {
+  console.log("f", f);
+  return runAppTest(f().foldMap(interpretTest, Id.of).extract()); //f(x)->g--> runApp(g)
+};
+
+//runApp(start);
+runAppTest(start);
