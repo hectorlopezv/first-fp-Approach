@@ -74,7 +74,7 @@ const router = { menu, createAuthor, write, latest };
 const interpret = (x) => (x.table ? dbToTask(x) : consoleToTask(x));
 const start = () =>
   dbAll(AuthorTable).map((authors) => (authors.length ? menu : createAuthor));
-
+console.log("hello")
 const runApp = (f) => {
   console.log("f", f);
   return f().foldMap(interpret, Task.of).fork(console.error, runApp); //f(x)->g--> runApp(g)
